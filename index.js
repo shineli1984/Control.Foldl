@@ -3,6 +3,7 @@ const Maybe = require('data.maybe')
 const r = require('ramda')
 
 const Fold = daggy.tagged('Fold', ['step', 'begin', 'done'])
+const FoldM = daggy.tagged('Fold', ['step', 'begin', 'done'])
 const Pair = daggy.tagged('Pair', ['_1', '_2'])
 const div = a => b => a / b
 const id = a => a
@@ -50,6 +51,56 @@ Fold.prototype.ap = function(right) {
     step,
     begin,
     done
+  )
+}
+
+FoldM.prototype.reduce = function(as) {
+  const con = (a, k) => x =>
+    this.step(x, a).chain(k)
+
+  return this.begin.chain(
+    b => r.reduceRight(con, this.done, as)(b)
+  )
+}
+
+// Functor
+FoldM.prototype.map = function(f) {
+  return FoldM(
+    this.step,
+    this.begin,
+    x => this.done(x).chain(f)
+  )
+}
+
+// Applicative
+FoldM.prototype.ap = function(right) {
+  const left = this
+  return FoldM(
+    p => a =>
+      left
+        .step(p._1, a)
+        .chain(_1 =>
+          right
+            .step(p._2, a)
+            .chain(_2 =>
+              Pair(_1, _2)
+            )
+        ),
+    left.begin.chain(l =>
+      right.begin.chain(r =>
+        Pair(l, r)
+      )
+    ),
+    x =>
+      left
+        .done(x._1)
+        .chain(f =>
+          right
+            .done(x._2)
+            .chain(v =>
+              f(v)
+            )
+        )
   )
 }
 
@@ -249,5 +300,40 @@ const elemIndex = r.compose(
   r.equals
 )
 
-console.log(elemIndex(5).reduce([2, 3, 3, 5]).toString())
+// const Promise = daggy.tagged('Promise', 'a')
+// Promise.of = a => Promise(a)
+// Promise.prototype.chain = function(f) {
+//   return f(this.a)
+// }
+// Promise.prototype.map = function(f) {
+//   return Promise(f(this.a))
+// }
+// Array.empty = _ => []
+// const re = sink(Promise, Array)(a => Promise.of([a + 1, a + 3, a + 5])).reduce([1, 2, 3])
+const sink = (M, W) => act =>
+  FoldM(
+    (m, a) =>
+      act(a)
+        .map(m_ =>
+          r.concat(m, m_)
+        ),
+    M.of(W.empty()),
+    M.of
+  )
 
+const list = Fold(
+  (acc, cur) =>
+    r.compose(
+      acc,
+      r.prepend(cur)
+    ),
+  id,
+  f => f([])
+)
+
+const revList = Fold(
+  (acc, cur) =>
+    [cur].concat(acc),
+  [],
+  id
+)
