@@ -2,8 +2,8 @@ const daggy = require('daggy')
 const Maybe = require('data.maybe')
 const r = require('ramda')
 
-const Fold = daggy.tagged('Fold', ['step', 'begin', 'done'])
-const FoldM = daggy.tagged('Fold', ['step', 'begin', 'done'])
+export const Fold = daggy.tagged('Fold', ['step', 'begin', 'done'])
+export const FoldM = daggy.tagged('Fold', ['step', 'begin', 'done'])
 const Pair = daggy.tagged('Pair', ['_1', '_2'])
 const div = a => b => a / b
 const id = a => a
@@ -105,7 +105,7 @@ FoldM.prototype.ap = function(right) {
 }
 
 // applications
-const _Fold1 = step => {
+export const _Fold1 = step => {
   const step_ = (acc, a) =>
     Maybe.Just(
       acc.isJust
@@ -120,28 +120,28 @@ const _Fold1 = step => {
   )
 }
 
-const concat = M => Fold(
+export const concat = M => Fold(
   (acc, a) => acc.concat(a),
   M.empty,
   id
 )
 
-const head = _Fold1(
+export const head = _Fold1(
   always
 )
 
-const last = _Fold1(
+export const last = _Fold1(
   r.flip(always)
 )
 
-const lastOr = a =>
+export const lastOr = a =>
   Fold(
     r.flip(always),
     a,
     id
   )
 
-const lastN = n =>
+export const lastN = n =>
   Fold(
     (acc, x) =>
       r.append(
@@ -154,72 +154,72 @@ const lastN = n =>
     id
   )
 
-const isEmpty =
+export const isEmpty =
   Fold(
     (_0, _1) => false,
     true,
     id
   )
 
-const length = Fold(
+export const length = Fold(
   (acc, _) => acc + 1,
   0,
   id
 )
 
-const sum = Fold(
+export const sum = Fold(
   (acc, c) => acc + c,
   0,
   id
 )
 
-const mean = sum
+export const mean = sum
   .map(div)
   .ap(length)
 
-const allTrue =
+export const allTrue =
   Fold(
     r.and,
     true,
     id
   )
 
-const anyTrue =
+export const anyTrue =
   Fold(
     r.or,
     false,
     id
   )
 
-const all = predicate =>
+export const all = predicate =>
   Fold(
     (acc, cur) => acc && predicate(cur),
     true,
     id
   )
 
-const any = predicate =>
+export const any = predicate =>
   Fold(
     (acc, cur) => acc || predicate(cur),
     false,
     id
   )
 
-const product =
+export const product =
   Fold(
     r.multiply,
     1,
     id
   )
 
-const sqrSum =
+export const sqrSum =
   Fold(
     (acc, cur) => acc + cur * cur,
     0,
     id
   )
 
-const variance =
+export const variance =
   sqrSum
     .map(
       sqrSum => length => mean =>
@@ -228,26 +228,26 @@ const variance =
     .ap(length)
     .ap(mean)
 
-const std =
+export const std =
   variance.map(Math.sqrt)
 
-const max =
+export const max =
   _Fold1(Math.max)
 
-const min =
+export const min =
   _Fold1(Math.min)
 
-const elem = r.compose(
+export const elem = r.compose(
   any,
   r.equals
 )
 
-const notElem = r.compose(
+export const notElem = r.compose(
   all,
   r.complement(r.equals)
 )
 
-const find = a =>
+export const find = a =>
   Fold(
     (acc, cur) =>
       acc.isJust
@@ -261,7 +261,7 @@ const find = a =>
     id
   )
 
-const nth = n =>
+export const nth = n =>
   Fold(
     (acc, cur) =>
       Pair(
@@ -278,7 +278,7 @@ const nth = n =>
     p => p._2
   )
 
-const findIndex = predicate =>
+export const findIndex = predicate =>
   Fold(
     (acc, cur) =>
       acc._2.isJust
@@ -295,7 +295,7 @@ const findIndex = predicate =>
       : p._2
   )
 
-const elemIndex = r.compose(
+export const elemIndex = r.compose(
   findIndex,
   r.equals
 )
@@ -310,7 +310,7 @@ const elemIndex = r.compose(
 // }
 // Array.empty = _ => []
 // const re = sink(Promise, Array)(a => Promise.of([a + 1, a + 3, a + 5])).reduce([1, 2, 3])
-const sink = (M, W) => act =>
+export const sink = (M, W) => act =>
   FoldM(
     (m, a) =>
       act(a)
@@ -321,7 +321,7 @@ const sink = (M, W) => act =>
     M.of
   )
 
-const list = Fold(
+export const list = Fold(
   (acc, cur) =>
     r.compose(
       acc,
@@ -331,9 +331,24 @@ const list = Fold(
   f => f([])
 )
 
-const revList = Fold(
+export const revList = Fold(
   (acc, cur) =>
     [cur].concat(acc),
   [],
   id
+)
+
+export const nub = Fold(
+  (acc, cur) =>
+    acc._2.has(cur)
+    ? acc
+    : Pair(
+        r.compose(
+          acc._1,
+          r.prepend(cur)
+        ),
+        acc._2.add(cur)
+      ),
+  Pair(id, new Set()),
+  p => p._1([])
 )
