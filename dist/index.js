@@ -100,23 +100,21 @@ FoldM.prototype.map = function (f) {
   var _this4 = this;
 
   return FoldM(this.step, this.begin, function (x) {
-    return _this4.done(x).chain(f);
+    return _this4.done(x).map(f);
   });
 };
 
 // Applicative
 FoldM.prototype.ap = function (right) {
   var left = this;
-  return FoldM(function (p) {
-    return function (a) {
-      return left.step(p._1, a).chain(function (_1) {
-        return right.step(p._2, a).chain(function (_2) {
-          return Pair(_1, _2);
-        });
+  return FoldM(function (p, a) {
+    return left.step(p._1, a).chain(function (_1) {
+      return right.step(p._2, a).map(function (_2) {
+        return Pair(_1, _2);
       });
-    };
+    });
   }, left.begin.chain(function (l) {
-    return right.begin.chain(function (r) {
+    return right.begin.map(function (r) {
       return Pair(l, r);
     });
   }), function (x) {
@@ -248,23 +246,13 @@ var findIndex = exports.findIndex = function findIndex(predicate) {
 
 var elemIndex = exports.elemIndex = r.compose(findIndex, r.equals);
 
-// const Promise = daggy.tagged('Promise', 'a')
-// Promise.of = a => Promise(a)
-// Promise.prototype.chain = function(f) {
-//   return f(this.a)
-// }
-// Promise.prototype.map = function(f) {
-//   return Promise(f(this.a))
-// }
-// Array.empty = _ => []
-// const re = sink(Promise, Array)(a => Promise.of([a + 1, a + 3, a + 5])).reduce([1, 2, 3])
-var sink = exports.sink = function sink(M, W) {
+var sink = exports.sink = function sink(Monad, Monoid) {
   return function (act) {
     return FoldM(function (m, a) {
       return act(a).map(function (m_) {
         return r.concat(m, m_);
       });
-    }, M.of(W.empty()), M.of);
+    }, Monad.of(Monoid.empty()), Monad.of);
   };
 };
 
@@ -325,3 +313,35 @@ var prefilterM = exports.prefilterM = function prefilterM(predicateM) {
     }, fold.begin, fold.done);
   };
 };
+
+var AMonad = daggy.tagged('AMonad', 'a');
+AMonad.of = function (a) {
+  return AMonad(a);
+};
+AMonad.prototype.chain = function (f) {
+  return f(this.a);
+};
+AMonad.prototype.map = function (f) {
+  return AMonad(f(this.a));
+};
+
+// make array a fantasy-land compatible Monoid
+Array.empty = function (_) {
+  return [];
+};
+
+var g = generalize(AMonad);
+
+var sumM = g(sum);
+
+var lengthM = g(length);
+var avg = function avg(sum) {
+  return function (length) {
+    return sum / length;
+  };
+};
+
+console.log(sumM.map(avg).ap(lengthM).reduce([9, 2, 4]));
+
+// const re = sink(AMonad, Array)(a => AMonad.of([a + 1, a + 3, a + 5])).reduce([1, 2, 3])
+// console.log(re)

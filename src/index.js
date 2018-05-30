@@ -76,7 +76,7 @@ FoldM.prototype.map = function(f) {
   return FoldM(
     this.step,
     this.begin,
-    x => this.done(x).chain(f)
+    x => this.done(x).map(f)
   )
 }
 
@@ -84,18 +84,18 @@ FoldM.prototype.map = function(f) {
 FoldM.prototype.ap = function(right) {
   const left = this
   return FoldM(
-    p => a =>
+    (p, a) =>
       left
         .step(p._1, a)
         .chain(_1 =>
           right
             .step(p._2, a)
-            .chain(_2 =>
+            .map(_2 =>
               Pair(_1, _2)
             )
         ),
     left.begin.chain(l =>
-      right.begin.chain(r =>
+      right.begin.map(r =>
         Pair(l, r)
       )
     ),
@@ -315,25 +315,15 @@ export const elemIndex = r.compose(
   r.equals
 )
 
-// const Promise = daggy.tagged('Promise', 'a')
-// Promise.of = a => Promise(a)
-// Promise.prototype.chain = function(f) {
-//   return f(this.a)
-// }
-// Promise.prototype.map = function(f) {
-//   return Promise(f(this.a))
-// }
-// Array.empty = _ => []
-// const re = sink(Promise, Array)(a => Promise.of([a + 1, a + 3, a + 5])).reduce([1, 2, 3])
-export const sink = (M, W) => act =>
+export const sink = (Monad, Monoid) => act =>
   FoldM(
     (m, a) =>
       act(a)
         .map(m_ =>
           r.concat(m, m_)
         ),
-    M.of(W.empty()),
-    M.of
+    Monad.of(Monoid.empty()),
+    Monad.of
   )
 
 export const list = Fold(
@@ -417,5 +407,3 @@ export const prefilterM = predicateM => fold =>
     fold.begin,
     fold.done
   )
-
-console.log(std.reduce([1, 2]))
