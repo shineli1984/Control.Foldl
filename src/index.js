@@ -2,16 +2,24 @@ const daggy = require('daggy')
 const Maybe = require('data.maybe')
 const r = require('ramda')
 
+/**
+ * Fold a b =
+ *   forall x. Fold (x -> a -> x) -> x -> (x -> b)
+ *                    step         begin    done
+ */
 export const Fold = daggy.tagged('Fold', ['step', 'begin', 'done'])
+
+/**
+ * FoldM m a b =
+ *   forall x. FoldM (x -> a -> m x) -> (m x) -> (x -> m b)
+ *                      step            begin       done
+ */
 export const FoldM = daggy.tagged('Fold', ['step', 'begin', 'done'])
 const Pair = daggy.tagged('Pair', ['_1', '_2'])
 const div = a => b => a / b
 const id = a => a
 const always = (a, _) => a
 
-/**
- * as needs to be Foldable
- */
 Fold.prototype.reduce = function(as) {
   const con = (a, k) => x =>
     k(this.step(x, a))
@@ -410,3 +418,4 @@ export const prefilterM = predicateM => fold =>
     fold.done
   )
 
+console.log(std.reduce([1, 2]))

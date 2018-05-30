@@ -7,7 +7,18 @@ var daggy = require('daggy');
 var Maybe = require('data.maybe');
 var r = require('ramda');
 
+/**
+ * Fold a b =
+ *   forall x. Fold (x -> a -> x) -> x -> (x -> b)
+ *                    step         begin    done
+ */
 var Fold = exports.Fold = daggy.tagged('Fold', ['step', 'begin', 'done']);
+
+/**
+ * FoldM m a b =
+ *   forall x. FoldM (x -> a -> m x) -> (m x) -> (x -> m b)
+ *                      step            begin       done
+ */
 var FoldM = exports.FoldM = daggy.tagged('Fold', ['step', 'begin', 'done']);
 var Pair = daggy.tagged('Pair', ['_1', '_2']);
 var div = function div(a) {
@@ -22,9 +33,6 @@ var always = function always(a, _) {
   return a;
 };
 
-/**
- * as needs to be Foldable
- */
 Fold.prototype.reduce = function (as) {
   var _this = this;
 
