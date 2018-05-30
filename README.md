@@ -99,7 +99,24 @@ const halfSum = Fold(
 
 halfSum.reduce([1, 3]) // 2
 ```
-## the Functor instance
+## Pre-operations
+Map before fold is a very common need. But a separate map from fold is not efficient. This package provides preMap for this.
+```js
+import {premapM, sum} from 'control.foldl'
+const sqr = a => a * a 
+const sqrSum = premapM(sqr)(sum)
+// [1, 2] will only be looped once
+sqrSum.reduce([1, 2]) // 5
+```
+Similarly, there is a prefilter to combine a filter operation with fold efficiently.
+```js
+import {prefilter, sum} from 'control.foldl'
+const sumOver2 = prefilter(a => a > 2)(sum)
+// [1, 2, 3, 4] will only be looped once for summing and filtering at the same time
+sumOver2.reduce([1, 2, 3, 4]) // 7
+```
+  
+## The Functor instance
 The above example can be written like this:
 ```js
 import {sum} from 'control.foldl'
@@ -145,6 +162,7 @@ const result = sink(AMonad, Array)(
 
 result.toString() // AMonad([2, 4, 6, 3, 5, 7, 4, 6, 8])
 ```
+There are also monadic versions for premap and prefilter
 
 ## Convert to monadic version
 Sometime, you need to use the build-in non-monadic util together with `FoldM`. Then you need to convert them.
@@ -170,6 +188,6 @@ const avg = sum => length => sum / length
 sumM
   .map(avg)
   .ap(lengthM)
-  .reduce([9, 2, 4]) // 5
+  .reduce([9, 2, 4]) // AMonad(5)
 
 ```

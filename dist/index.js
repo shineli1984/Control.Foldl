@@ -313,35 +313,3 @@ var prefilterM = exports.prefilterM = function prefilterM(predicateM) {
     }, fold.begin, fold.done);
   };
 };
-
-var AMonad = daggy.tagged('AMonad', 'a');
-AMonad.of = function (a) {
-  return AMonad(a);
-};
-AMonad.prototype.chain = function (f) {
-  return f(this.a);
-};
-AMonad.prototype.map = function (f) {
-  return AMonad(f(this.a));
-};
-
-// make array a fantasy-land compatible Monoid
-Array.empty = function (_) {
-  return [];
-};
-
-var g = generalize(AMonad);
-
-var sumM = g(sum);
-
-var lengthM = g(length);
-var avg = function avg(sum) {
-  return function (length) {
-    return sum / length;
-  };
-};
-
-console.log(sumM.map(avg).ap(lengthM).reduce([9, 2, 4]));
-
-// const re = sink(AMonad, Array)(a => AMonad.of([a + 1, a + 3, a + 5])).reduce([1, 2, 3])
-// console.log(re)
