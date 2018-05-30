@@ -104,6 +104,13 @@ FoldM.prototype.ap = function(right) {
   )
 }
 
+export const generalize = Monad => ({step, begin, done}) =>
+  FoldM(
+    (acc, cur) => Monad.of(step(acc, cur)),
+    Monad.of(begin),
+    x => Monad.of(done(x))
+  )
+
 // applications
 export const _Fold1 = step => {
   const step_ = (acc, a) =>
@@ -352,3 +359,54 @@ export const nub = Fold(
   Pair(id, new Set()),
   p => p._1([])
 )
+
+export const set = Fold(
+  (acc, cur) =>
+    acc.add(cur),
+  new Set(),
+  id
+)
+
+export const premap = f => fold =>
+  Fold(
+    (acc, cur) => fold.step(acc, f(cur)),
+    fold.begin,
+    fold.done
+  )
+
+export const premapM = f => fold =>
+  FoldM(
+    (acc, cur) =>
+      f(cur)
+        .chain(c =>
+          fold.step(acc, c)
+        ),
+    fold.begin,
+    fold.done
+  )
+
+export const prefilter = predicate => fold =>
+  Fold(
+    (acc, cur) =>
+      predicate(cur)
+      ? fold.step(acc, cur)
+      : acc,
+    fold.begin,
+    fold.done
+  )
+
+export const prefilterM = predicateM => fold =>
+  FoldM(
+    (acc, cur) => {
+      const useM = predicateM(cur)
+
+      return useM.chain(use =>
+        use
+        ? fold.step(acc, cur)
+        : useM.constructor.of(acc)
+      )
+    },
+    fold.begin,
+    fold.done
+  )
+

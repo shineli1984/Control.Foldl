@@ -120,6 +120,19 @@ FoldM.prototype.ap = function (right) {
   });
 };
 
+var generalize = exports.generalize = function generalize(Monad) {
+  return function (_ref) {
+    var step = _ref.step,
+        begin = _ref.begin,
+        done = _ref.done;
+    return FoldM(function (acc, cur) {
+      return Monad.of(step(acc, cur));
+    }, Monad.of(begin), function (x) {
+      return Monad.of(done(x));
+    });
+  };
+};
+
 // applications
 var _Fold1 = exports._Fold1 = function _Fold1(step) {
   var step_ = function step_(acc, a) {
@@ -263,4 +276,44 @@ var nub = exports.nub = Fold(function (acc, cur) {
   return p._1([]);
 });
 
-console.log(nub.reduce([2, 3, 2, 1, 5, 1, 2, 1, 6]));
+var set = exports.set = Fold(function (acc, cur) {
+  return acc.add(cur);
+}, new Set(), id);
+
+var premap = exports.premap = function premap(f) {
+  return function (fold) {
+    return Fold(function (acc, cur) {
+      return fold.step(acc, f(cur));
+    }, fold.begin, fold.done);
+  };
+};
+
+var premapM = exports.premapM = function premapM(f) {
+  return function (fold) {
+    return FoldM(function (acc, cur) {
+      return f(cur).chain(function (c) {
+        return fold.step(acc, c);
+      });
+    }, fold.begin, fold.done);
+  };
+};
+
+var prefilter = exports.prefilter = function prefilter(predicate) {
+  return function (fold) {
+    return Fold(function (acc, cur) {
+      return predicate(cur) ? fold.step(acc, cur) : acc;
+    }, fold.begin, fold.done);
+  };
+};
+
+var prefilterM = exports.prefilterM = function prefilterM(predicateM) {
+  return function (fold) {
+    return FoldM(function (acc, cur) {
+      var useM = predicateM(cur);
+
+      return useM.chain(function (use) {
+        return use ? fold.step(acc, cur) : useM.constructor.of(acc);
+      });
+    }, fold.begin, fold.done);
+  };
+};
