@@ -15,6 +15,7 @@ export const Fold = daggy.tagged('Fold', ['step', 'begin', 'done'])
  *                      step            begin       done
  */
 export const FoldM = daggy.tagged('Fold', ['step', 'begin', 'done'])
+
 const Pair = daggy.tagged('Pair', ['_1', '_2'])
 const div = a => b => a / b
 const id = a => a
@@ -112,6 +113,9 @@ FoldM.prototype.ap = function(right) {
   )
 }
 
+/**
+ * generalize :: Monad m -> Fold a b -> FoldM m a b
+ */
 export const generalize = Monad => ({step, begin, done}) =>
   FoldM(
     (acc, cur) => Monad.of(step(acc, cur)),
@@ -119,7 +123,12 @@ export const generalize = Monad => ({step, begin, done}) =>
     x => Monad.of(done(x))
   )
 
-// applications
+/**
+ * Take a step with same type for accumulated value and current value and
+ * produce a Fold with a step having accumulated value wrapped inside Maybe.
+ *
+ * _Fold1 :: ((a, a) -> a) -> Fold a (Maybe a)
+ */
 export const _Fold1 = step => {
   const step_ = (acc, a) =>
     Maybe.Just(
@@ -135,20 +144,36 @@ export const _Fold1 = step => {
   )
 }
 
-export const concat = M => Fold(
+/**
+ * concat :: Monoid a -> Fold a a
+ * Fold monoid(s) inside a Foldable using its concat and empty methods.
+ */
+export const concat = Monoid => Fold(
   (acc, a) => acc.concat(a),
-  M.empty,
+  Monoid.empty(),
   id
 )
 
+/**
+ * head :: Fold a (Maybe a)
+ * Get the first element of a Foldable. If the Foldable is empty, the fold will return Nothing.
+ */
 export const head = _Fold1(
   always
 )
 
+/**
+ * last :: Fold a (Maybe a)
+ * Get the last element of a Foldable. If the Foldable is empty, the fold will return Nothing.
+ */
 export const last = _Fold1(
   r.flip(always)
 )
 
+/**
+ * lastOr :: a -> Fold a a
+ * Get the last element of a Foldable with a default value if there is no last element.
+ */
 export const lastOr = a =>
   Fold(
     r.flip(always),
