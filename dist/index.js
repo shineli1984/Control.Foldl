@@ -3,28 +3,47 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-var daggy = require('daggy');
-var Maybe = require('data.maybe');
-var r = require('ramda');
+exports.prefilterM = exports.prefilter = exports.premapM = exports.premap = exports.set = exports.nub = exports.revList = exports.list = exports.sink = exports.elemIndex = exports.findIndex = exports.nth = exports.find = exports.notElem = exports.elem = exports.min = exports.max = exports.std = exports.variance = exports.sqrSum = exports.product = exports.any = exports.all = exports.anyTrue = exports.allTrue = exports.mean = exports.sum = exports.length = exports.isEmpty = exports.lastN = exports.lastOr = exports.last = exports.head = exports.concat = exports._Fold1 = exports.generalize = exports.FoldM = exports.Fold = undefined;
 
+var _daggy = require('daggy');
+
+var _daggy2 = _interopRequireDefault(_daggy);
+
+var _data = require('data.maybe');
+
+var _data2 = _interopRequireDefault(_data);
+
+var _ramda = require('ramda');
+
+var _ramda2 = _interopRequireDefault(_ramda);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+
+// reduceRight, flip, append, drop, and, or, multiply, compose, complement, equals, concat, prepend
 /**
  * Fold a b =
  *   forall x. Fold (x -> a -> x) -> x -> (x -> b)
  *                    step         begin    done
  */
-var Fold = exports.Fold = daggy.tagged('Fold', ['step', 'begin', 'done']);
+var Fold = exports.Fold = _daggy2.default.tagged('Fold', ['step', 'begin', 'done']);
 
 /**
  * FoldM m a b =
  *   forall x. FoldM (x -> a -> m x) -> (m x) -> (x -> m b)
  *                      step            begin       done
  */
-var FoldM = exports.FoldM = daggy.tagged('Fold', ['step', 'begin', 'done']);
-var Pair = daggy.tagged('Pair', ['_1', '_2']);
+var FoldM = exports.FoldM = _daggy2.default.tagged('Fold', ['step', 'begin', 'done']);
+
+var Pair = _daggy2.default.tagged('Pair', ['_1', '_2']);
 var div = function div(a) {
   return function (b) {
     return a / b;
   };
+};
+var append = function append(a, arr) {
+  return [].concat(_toConsumableArray(arr), [a]);
 };
 var id = function id(a) {
   return a;
@@ -32,17 +51,77 @@ var id = function id(a) {
 var always = function always(a, _) {
   return a;
 };
+var flip = function flip(f) {
+  return function (a, b) {
+    return f(b, a);
+  };
+};
+var foldr = function foldr(reducer, acc, foldable) {
+  if (foldable.constructor !== Array && foldable.reduceRight) {
+    return foldable.reduceRight(reducer, acc);
+  }
+
+  var idx = foldable.length - 1;
+  while (idx >= 0) {
+    acc = reducer(foldable[idx], acc);
+    idx -= 1;
+  }
+  return acc;
+};
+var drop = function drop(n, xs) {
+  return xs.slice(Math.max(0, n), Infinity);
+};
+var and = function and(a, b) {
+  return a && b;
+};
+var or = function or(a, b) {
+  return a || b;
+};
+var multiply = function multiply(a, b) {
+  return a * b;
+};
+var compose = function compose() {
+  for (var _len = arguments.length, fs = Array(_len), _key = 0; _key < _len; _key++) {
+    fs[_key] = arguments[_key];
+  }
+
+  return fs.reduce(function (acc, cur, index) {
+    return index === 0 ? function () {
+      return acc(cur.apply(undefined, arguments));
+    } : function (a) {
+      return acc(cur(a));
+    };
+  }, id);
+};
+var equals = function equals(a) {
+  return function (b) {
+    return a === b;
+  };
+};
+var not = function not(a) {
+  return !a;
+};
+var notEqual = function notEqual(a) {
+  return function (b) {
+    return compose(not, equals(a))(b);
+  };
+};
+var prepend = function prepend(a) {
+  return function (as) {
+    return [a].concat(_toConsumableArray(as));
+  };
+};
 
 Fold.prototype.reduce = function (as) {
   var _this = this;
 
-  var con = function con(a, k) {
+  var con = function con(cur, acc) {
     return function (x) {
-      return k(_this.step(x, a));
+      return acc(_this.step(x, cur));
     };
   };
 
-  return r.reduceRight(con, this.done, as)(this.begin);
+  return foldr(con, this.done, as)(this.begin);
 };
 
 // Functor
@@ -91,7 +170,7 @@ FoldM.prototype.reduce = function (as) {
   };
 
   return this.begin.chain(function (b) {
-    return r.reduceRight(con, _this3.done, as)(b);
+    return foldr(con, _this3.done, as)(b);
   });
 };
 
@@ -126,6 +205,9 @@ FoldM.prototype.ap = function (right) {
   });
 };
 
+/**
+ * generalize :: Monad m -> Fold a b -> FoldM m a b
+ */
 var generalize = exports.generalize = function generalize(Monad) {
   return function (_ref) {
     var step = _ref.step,
@@ -139,32 +221,53 @@ var generalize = exports.generalize = function generalize(Monad) {
   };
 };
 
-// applications
+/**
+ * Take a step with same type for accumulated value and current value and
+ * produce a Fold with a step having accumulated value wrapped inside Maybe.
+ *
+ * _Fold1 :: ((a, a) -> a) -> Fold a (Maybe a)
+ */
 var _Fold1 = exports._Fold1 = function _Fold1(step) {
   var step_ = function step_(acc, a) {
-    return Maybe.Just(acc.isJust ? step(acc.value, a) : a);
+    return _data2.default.Just(acc.isJust ? step(acc.value, a) : a);
   };
 
-  return Fold(step_, Maybe.Nothing(), id);
+  return Fold(step_, _data2.default.Nothing(), id);
 };
 
-var concat = exports.concat = function concat(M) {
+/**
+ * concat :: Monoid a -> Fold a a
+ * Fold monoid(s) inside a Foldable using its concat and empty methods.
+ */
+var concat = exports.concat = function concat(Monoid) {
   return Fold(function (acc, a) {
     return acc.concat(a);
-  }, M.empty, id);
+  }, Monoid.empty(), id);
 };
 
+/**
+ * head :: Fold a (Maybe a)
+ * Get the first element of a Foldable. If the Foldable is empty, the fold will return Nothing.
+ */
 var head = exports.head = _Fold1(always);
 
-var last = exports.last = _Fold1(r.flip(always));
+/**
+ * last :: Fold a (Maybe a)
+ * Get the last element of a Foldable. If the Foldable is empty, the fold will return Nothing.
+ */
+var last = exports.last = _Fold1(flip(always));
 
+/**
+ * lastOr :: a -> Fold a a
+ * Get the last element of a Foldable with a default value if there is no last element.
+ */
 var lastOr = exports.lastOr = function lastOr(a) {
-  return Fold(r.flip(always), a, id);
+  return Fold(flip(always), a, id);
 };
 
 var lastN = exports.lastN = function lastN(n) {
   return Fold(function (acc, x) {
-    return r.append(x, acc.length < n ? acc : r.drop(1, acc));
+    return append(x, acc.length < n ? acc : drop(1, acc));
   }, [], id);
 };
 
@@ -182,9 +285,9 @@ var sum = exports.sum = Fold(function (acc, c) {
 
 var mean = exports.mean = sum.map(div).ap(length);
 
-var allTrue = exports.allTrue = Fold(r.and, true, id);
+var allTrue = exports.allTrue = Fold(and, true, id);
 
-var anyTrue = exports.anyTrue = Fold(r.or, false, id);
+var anyTrue = exports.anyTrue = Fold(or, false, id);
 
 var all = exports.all = function all(predicate) {
   return Fold(function (acc, cur) {
@@ -198,7 +301,7 @@ var any = exports.any = function any(predicate) {
   }, false, id);
 };
 
-var product = exports.product = Fold(r.multiply, 1, id);
+var product = exports.product = Fold(multiply, 1, id);
 
 var sqrSum = exports.sqrSum = Fold(function (acc, cur) {
   return acc + cur * cur;
@@ -218,46 +321,46 @@ var max = exports.max = _Fold1(Math.max);
 
 var min = exports.min = _Fold1(Math.min);
 
-var elem = exports.elem = r.compose(any, r.equals);
+var elem = exports.elem = compose(any, equals);
 
-var notElem = exports.notElem = r.compose(all, r.complement(r.equals));
+var notElem = exports.notElem = compose(all, notEqual);
 
 var find = exports.find = function find(a) {
   return Fold(function (acc, cur) {
-    return acc.isJust ? acc : cur === a ? Maybe.Just(cur) : Maybe.Nothing();
-  }, Maybe.Nothing(), id);
+    return acc.isJust ? acc : cur === a ? _data2.default.Just(cur) : _data2.default.Nothing();
+  }, _data2.default.Nothing(), id);
 };
 
 var nth = exports.nth = function nth(n) {
   return Fold(function (acc, cur) {
-    return Pair(acc._1 + 1, acc._2.isJust ? acc._2 : n === acc._1 ? Maybe.Just(cur) : Maybe.Nothing());
-  }, Pair(0, Maybe.Nothing()), function (p) {
+    return Pair(acc._1 + 1, acc._2.isJust ? acc._2 : n === acc._1 ? _data2.default.Just(cur) : _data2.default.Nothing());
+  }, Pair(0, _data2.default.Nothing()), function (p) {
     return p._2;
   });
 };
 
 var findIndex = exports.findIndex = function findIndex(predicate) {
   return Fold(function (acc, cur) {
-    return acc._2.isJust ? acc : predicate(cur) ? Pair(acc._1, Maybe.Just(cur)) : Pair(acc._1 + 1, Maybe.Nothing());
-  }, Pair(0, Maybe.Nothing()), function (p) {
-    return p._2.isJust ? Maybe.Just(p._1) : p._2;
+    return acc._2.isJust ? acc : predicate(cur) ? Pair(acc._1, _data2.default.Just(cur)) : Pair(acc._1 + 1, _data2.default.Nothing());
+  }, Pair(0, _data2.default.Nothing()), function (p) {
+    return p._2.isJust ? _data2.default.Just(p._1) : p._2;
   });
 };
 
-var elemIndex = exports.elemIndex = r.compose(findIndex, r.equals);
+var elemIndex = exports.elemIndex = compose(findIndex, equals);
 
 var sink = exports.sink = function sink(Monad, Monoid) {
   return function (act) {
     return FoldM(function (m, a) {
       return act(a).map(function (m_) {
-        return r.concat(m, m_);
+        return m.concat(m_);
       });
     }, Monad.of(Monoid.empty()), Monad.of);
   };
 };
 
 var list = exports.list = Fold(function (acc, cur) {
-  return r.compose(acc, r.prepend(cur));
+  return compose(acc, prepend(cur));
 }, id, function (f) {
   return f([]);
 });
@@ -267,7 +370,7 @@ var revList = exports.revList = Fold(function (acc, cur) {
 }, [], id);
 
 var nub = exports.nub = Fold(function (acc, cur) {
-  return acc._2.has(cur) ? acc : Pair(r.compose(acc._1, r.prepend(cur)), acc._2.add(cur));
+  return acc._2.has(cur) ? acc : Pair(compose(acc._1, prepend(cur)), acc._2.add(cur));
 }, Pair(id, new Set()), function (p) {
   return p._1([]);
 });
@@ -313,3 +416,5 @@ var prefilterM = exports.prefilterM = function prefilterM(predicateM) {
     }, fold.begin, fold.done);
   };
 };
+
+console.log(nub.reduce([1, 2, 3, 2]));

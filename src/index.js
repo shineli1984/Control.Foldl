@@ -1,7 +1,5 @@
-const daggy = require('daggy')
-const Maybe = require('data.maybe')
-const r = require('ramda')
-
+import daggy from 'daggy'
+import Maybe from 'data.maybe'
 /**
  * Fold a b =
  *   forall x. Fold (x -> a -> x) -> x -> (x -> b)
@@ -18,14 +16,49 @@ export const FoldM = daggy.tagged('Fold', ['step', 'begin', 'done'])
 
 const Pair = daggy.tagged('Pair', ['_1', '_2'])
 const div = a => b => a / b
+const append = (a, arr) => [...arr, a]
 const id = a => a
 const always = (a, _) => a
+const flip = f => (a, b) => f(b, a)
+const foldr = (reducer, acc, foldable) => {
+  if (foldable.constructor !== Array && foldable.reduceRight) {
+    return foldable.reduceRight(reducer, acc)
+  }
+
+  var idx = foldable.length - 1;
+  while (idx >= 0) {
+    acc = reducer(foldable[idx], acc);
+    idx -= 1;
+  }
+  return acc;
+}
+const drop = (n, xs) =>
+  xs.slice(Math.max(0, n), Infinity)
+const and = (a, b) => a && b
+const or = (a, b) => a || b
+const multiply = (a, b) => a * b
+const compose = (...fs) =>
+  fs.reduce(
+    (acc, cur, index) =>
+      index === 0
+      ? (...a) => acc(cur(...a))
+      : a => acc(cur(a))
+    ,
+    id
+  )
+const equals = a => b => a === b
+const not = a => !a
+const notEqual = a => b => compose(
+  not,
+  equals(a)
+)(b)
+const prepend = a => as => [a, ...as]
 
 Fold.prototype.reduce = function(as) {
-  const con = (a, k) => x =>
-    k(this.step(x, a))
+  const con = (cur, acc) => x =>
+    acc(this.step(x, cur))
 
-  return r.reduceRight(con, this.done, as)(this.begin)
+  return foldr(con, this.done, as)(this.begin)
 }
 
 // Functor
@@ -68,7 +101,7 @@ FoldM.prototype.reduce = function(as) {
     this.step(x, a).chain(k)
 
   return this.begin.chain(
-    b => r.reduceRight(con, this.done, as)(b)
+    b => foldr(con, this.done, as)(b)
   )
 }
 
@@ -167,7 +200,7 @@ export const head = _Fold1(
  * Get the last element of a Foldable. If the Foldable is empty, the fold will return Nothing.
  */
 export const last = _Fold1(
-  r.flip(always)
+  flip(always)
 )
 
 /**
@@ -176,7 +209,7 @@ export const last = _Fold1(
  */
 export const lastOr = a =>
   Fold(
-    r.flip(always),
+    flip(always),
     a,
     id
   )
@@ -184,11 +217,11 @@ export const lastOr = a =>
 export const lastN = n =>
   Fold(
     (acc, x) =>
-      r.append(
+      append(
         x,
         acc.length < n
         ? acc
-        : r.drop(1, acc)
+        : drop(1, acc)
       ),
     [],
     id
@@ -219,14 +252,14 @@ export const mean = sum
 
 export const allTrue =
   Fold(
-    r.and,
+    and,
     true,
     id
   )
 
 export const anyTrue =
   Fold(
-    r.or,
+    or,
     false,
     id
   )
@@ -247,7 +280,7 @@ export const any = predicate =>
 
 export const product =
   Fold(
-    r.multiply,
+    multiply,
     1,
     id
   )
@@ -277,14 +310,14 @@ export const max =
 export const min =
   _Fold1(Math.min)
 
-export const elem = r.compose(
+export const elem = compose(
   any,
-  r.equals
+  equals
 )
 
-export const notElem = r.compose(
+export const notElem = compose(
   all,
-  r.complement(r.equals)
+  notEqual
 )
 
 export const find = a =>
@@ -335,9 +368,9 @@ export const findIndex = predicate =>
       : p._2
   )
 
-export const elemIndex = r.compose(
+export const elemIndex = compose(
   findIndex,
-  r.equals
+  equals
 )
 
 export const sink = (Monad, Monoid) => act =>
@@ -345,7 +378,7 @@ export const sink = (Monad, Monoid) => act =>
     (m, a) =>
       act(a)
         .map(m_ =>
-          r.concat(m, m_)
+          m.concat(m_)
         ),
     Monad.of(Monoid.empty()),
     Monad.of
@@ -353,9 +386,9 @@ export const sink = (Monad, Monoid) => act =>
 
 export const list = Fold(
   (acc, cur) =>
-    r.compose(
+    compose(
       acc,
-      r.prepend(cur)
+      prepend(cur)
     ),
   id,
   f => f([])
@@ -373,9 +406,9 @@ export const nub = Fold(
     acc._2.has(cur)
     ? acc
     : Pair(
-        r.compose(
+        compose(
           acc._1,
-          r.prepend(cur)
+          prepend(cur)
         ),
         acc._2.add(cur)
       ),
