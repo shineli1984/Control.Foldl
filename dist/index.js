@@ -13,15 +13,10 @@ var _data = require('data.maybe');
 
 var _data2 = _interopRequireDefault(_data);
 
-var _ramda = require('ramda');
-
-var _ramda2 = _interopRequireDefault(_ramda);
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
-// reduceRight, flip, append, drop, and, or, multiply, compose, complement, equals, concat, prepend
 /**
  * Fold a b =
  *   forall x. Fold (x -> a -> x) -> x -> (x -> b)
@@ -416,5 +411,3 @@ var prefilterM = exports.prefilterM = function prefilterM(predicateM) {
     }, fold.begin, fold.done);
   };
 };
-
-console.log(nub.reduce([1, 2, 3, 2]));
