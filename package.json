@@ -1,10 +1,17 @@
 {
   "name": "control.foldl",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "main": "dist/index.js",
   "license": "WTFPL",
   "homepage": "https://github.com/shineli1984/Control.Foldl",
-  "keywords": ["fold", "foldl", "left fold", "reduce", "Haskell", "control.foldl"],
+  "keywords": [
+    "fold",
+    "foldl",
+    "left fold",
+    "reduce",
+    "Haskell",
+    "control.foldl"
+  ],
   "dependencies": {
     "daggy": "^1.2.0",
     "data.maybe": "^1.2.2"
