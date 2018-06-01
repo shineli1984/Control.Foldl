@@ -18,7 +18,7 @@
     "data.maybe": "^1.2.2"
   },
   "scripts": {
-    "build": "babel src --out-dir dist --presets=es2015",
+    "build": "babel src --out-dir dist --presets=es2015 --no-comments",
     "start": "yarn run build && node ./dist/index.js"
   },
   "devDependencies": {
