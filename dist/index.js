@@ -260,48 +260,96 @@ var lastOr = exports.lastOr = function lastOr(a) {
   return Fold(flip(always), a, id);
 };
 
+/**
+ * lastN :: Integer -> Fold a [a]
+ * Get the last N elements of a Foldable structure
+ */
 var lastN = exports.lastN = function lastN(n) {
   return Fold(function (acc, x) {
     return append(x, acc.length < n ? acc : drop(1, acc));
   }, [], id);
 };
 
+/**
+ * isEmpty :: Fold a Boolean
+ * Check if a Foldable is empty
+ */
 var isEmpty = exports.isEmpty = Fold(function (_0, _1) {
   return false;
 }, true, id);
 
+/**
+ * length :: Fold a Integer
+ * Get the length of a Foldable
+ */
 var length = exports.length = Fold(function (acc, _) {
   return acc + 1;
 }, 0, id);
 
+/**
+ * sum :: Number a => Fold a a
+ * Get the sum of elements in a Foldable
+ */
 var sum = exports.sum = Fold(function (acc, c) {
   return acc + c;
 }, 0, id);
 
+/**
+ * mean :: Number a  => Fold a a
+ * Get the mean (average) of elements in a Foldable
+ */
 var mean = exports.mean = sum.map(div).ap(length);
 
+/**
+ * allTrue :: Fold a Boolean
+ * Check if all elements in a foldable are true-sy
+ */
 var allTrue = exports.allTrue = Fold(and, true, id);
 
+/**
+ * anyTrue :: Fold a Boolean
+ * Check if there is at least one element in a foldable is true-sy
+ */
 var anyTrue = exports.anyTrue = Fold(or, false, id);
 
+/**
+ * all :: (a -> Boolean) -> Fold a Boolean
+ * Check if all element in a foldable satisfy a predicate
+ */
 var all = exports.all = function all(predicate) {
   return Fold(function (acc, cur) {
     return acc && predicate(cur);
   }, true, id);
 };
 
+/**
+ * any :: (a -> Boolean) -> Fold a Boolean
+ * Check if there is at least one element in a foldable satisfy a predicate
+ */
 var any = exports.any = function any(predicate) {
   return Fold(function (acc, cur) {
     return acc || predicate(cur);
   }, false, id);
 };
 
+/**
+ * product :: Number a => Fold a a
+ * Multiply all numbers
+ */
 var product = exports.product = Fold(multiply, 1, id);
 
+/**
+ * sqrSum :: Number a => Fold a a
+ * Calculate the square sum
+ */
 var sqrSum = exports.sqrSum = Fold(function (acc, cur) {
   return acc + cur * cur;
 }, 0, id);
 
+/**
+ * variance :: Number a => Fold a a
+ * Calculate variance
+ */
 var variance = exports.variance = sqrSum.map(function (sqrSum) {
   return function (length) {
     return function (mean) {
@@ -310,22 +358,50 @@ var variance = exports.variance = sqrSum.map(function (sqrSum) {
   };
 }).ap(length).ap(mean);
 
+/**
+ * std :: Number a => Fold a a
+ * Calculate standard deviation
+ */
 var std = exports.std = variance.map(Math.sqrt);
 
+/**
+ * max :: Number a => Fold a a
+ * Get the maximum number
+ */
 var max = exports.max = _Fold1(Math.max);
 
+/**
+ * min :: Number a => Fold a a
+ * Get the minimal number
+ */
 var min = exports.min = _Fold1(Math.min);
 
+/**
+ * elem :: a -> Fold a Boolean
+ * Check if an element is in the foldable
+ */
 var elem = exports.elem = compose(any, equals);
 
+/**
+ * notElem :: a -> Fold a Boolean
+ * Check if an element is NOT in the foldable
+ */
 var notElem = exports.notElem = compose(all, notEqual);
 
+/**
+ * find :: a -> Fold a Maybe a
+ * Find an element and return it wrapped in a Just or Nothing
+ */
 var find = exports.find = function find(a) {
   return Fold(function (acc, cur) {
     return acc.isJust ? acc : cur === a ? _data2.default.Just(cur) : _data2.default.Nothing();
   }, _data2.default.Nothing(), id);
 };
 
+/**
+ * nth :: Integer -> Fold a a
+ * Get the nth element wrapped in a Just or Nothing
+ */
 var nth = exports.nth = function nth(n) {
   return Fold(function (acc, cur) {
     return Pair(acc._1 + 1, acc._2.isJust ? acc._2 : n === acc._1 ? _data2.default.Just(cur) : _data2.default.Nothing());
@@ -334,6 +410,10 @@ var nth = exports.nth = function nth(n) {
   });
 };
 
+/**
+ * findIndex :: (a -> Boolean) -> Fold a Maybe(Integer)
+ * Find a index according to a predicate wrapped in a Just or Nothing
+ */
 var findIndex = exports.findIndex = function findIndex(predicate) {
   return Fold(function (acc, cur) {
     return acc._2.isJust ? acc : predicate(cur) ? Pair(acc._1, _data2.default.Just(cur)) : Pair(acc._1 + 1, _data2.default.Nothing());
@@ -342,8 +422,17 @@ var findIndex = exports.findIndex = function findIndex(predicate) {
   });
 };
 
+/**
+ * elemIndex :: a -> Fold a Integer
+ * Find the index of an element wrapped in Just or Nothing
+ */
 var elemIndex = exports.elemIndex = compose(findIndex, equals);
 
+/**
+ * sink :: (Monad m, Monoid w) -> (a -> m w) -> FoldM m a w
+ * Convert a function producing effects to a Foldable.
+ * Then concat the result of the effects for each element when reduced.
+ */
 var sink = exports.sink = function sink(Monad, Monoid) {
   return function (act) {
     return FoldM(function (m, a) {
@@ -354,26 +443,48 @@ var sink = exports.sink = function sink(Monad, Monoid) {
   };
 };
 
+/**
+ * list :: Fold a [a]
+ * Fold all elements to a list
+ */
 var list = exports.list = Fold(function (acc, cur) {
   return compose(acc, prepend(cur));
 }, id, function (f) {
   return f([]);
 });
 
+/**
+ * revList :: Fold a [a]
+ * Reverse a list
+ */
 var revList = exports.revList = Fold(function (acc, cur) {
   return [cur].concat(acc);
 }, [], id);
 
+/**
+ * num :: Ord a => Fold a [a]
+ * Remove remaining duplicates of each element and produce a list containing unique elements.
+ */
 var nub = exports.nub = Fold(function (acc, cur) {
   return acc._2.has(cur) ? acc : Pair(compose(acc._1, prepend(cur)), acc._2.add(cur));
 }, Pair(id, new Set()), function (p) {
   return p._1([]);
 });
 
+/**
+ * set :: Fold a (Set a)
+ * Fold to Set
+ */
 var set = exports.set = Fold(function (acc, cur) {
   return acc.add(cur);
 }, new Set(), id);
 
+/**
+ * premap :: (a -> b) -> Fold a r -> Fold b r
+ * Get a Fold that run f before each step.
+ * This is essentially the same as in mapping then folding.
+ * But this is more efficient in most cases.
+ */
 var premap = exports.premap = function premap(f) {
   return function (fold) {
     return Fold(function (acc, cur) {
@@ -382,6 +493,10 @@ var premap = exports.premap = function premap(f) {
   };
 };
 
+/**
+ * premapM :: (a -> m b) -> FoldM m a r -> FoldM m b r
+ * The monadic version of the premap.
+ */
 var premapM = exports.premapM = function premapM(f) {
   return function (fold) {
     return FoldM(function (acc, cur) {
@@ -392,6 +507,11 @@ var premapM = exports.premapM = function premapM(f) {
   };
 };
 
+/**
+ * prefilter :: (a -> Boolean) -> Fold a r -> Fold a r
+ * Get a Fold that run a predicate on the current value before each step to
+ * determine the result should include the current step or not.
+ */
 var prefilter = exports.prefilter = function prefilter(predicate) {
   return function (fold) {
     return Fold(function (acc, cur) {
@@ -400,6 +520,10 @@ var prefilter = exports.prefilter = function prefilter(predicate) {
   };
 };
 
+/**
+ * prefilterM :: (a -> m Boolean) -> Fold m a r -> Fold m a r
+ * The monadic version of prefilter
+ */
 var prefilterM = exports.prefilterM = function prefilterM(predicateM) {
   return function (fold) {
     return FoldM(function (acc, cur) {

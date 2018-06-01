@@ -193,4 +193,4 @@ sumM
 ```
 
 # API documentation
-Type signaure, description and examples are in source code.
+Type signaure, description and examples are in [source](https://github.com/shineli1984/Control.Foldl/blob/master/src/index.js).
