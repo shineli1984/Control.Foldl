@@ -214,6 +214,10 @@ export const lastOr = a =>
     id
   )
 
+/**
+ * lastN :: Integer -> Fold a [a]
+ * Get the last N elements of a Foldable structure
+ */
 export const lastN = n =>
   Fold(
     (acc, x) =>
@@ -227,6 +231,10 @@ export const lastN = n =>
     id
   )
 
+/**
+ * isEmpty :: Fold a Boolean
+ * Check if a Foldable is empty
+ */
 export const isEmpty =
   Fold(
     (_0, _1) => false,
@@ -234,22 +242,38 @@ export const isEmpty =
     id
   )
 
+/**
+ * length :: Fold a Integer
+ * Get the length of a Foldable
+ */
 export const length = Fold(
   (acc, _) => acc + 1,
   0,
   id
 )
 
+/**
+ * sum :: Number a => Fold a a
+ * Get the sum of elements in a Foldable
+ */
 export const sum = Fold(
   (acc, c) => acc + c,
   0,
   id
 )
 
+/**
+ * mean :: Number a  => Fold a a
+ * Get the mean (average) of elements in a Foldable
+ */
 export const mean = sum
   .map(div)
   .ap(length)
 
+/**
+ * allTrue :: Fold a Boolean
+ * Check if all elements in a foldable are true-sy
+ */
 export const allTrue =
   Fold(
     and,
@@ -257,6 +281,10 @@ export const allTrue =
     id
   )
 
+/**
+ * anyTrue :: Fold a Boolean
+ * Check if there is at least one element in a foldable is true-sy
+ */
 export const anyTrue =
   Fold(
     or,
@@ -264,6 +292,10 @@ export const anyTrue =
     id
   )
 
+/**
+ * all :: (a -> Boolean) -> Fold a Boolean
+ * Check if all element in a foldable satisfy a predicate
+ */
 export const all = predicate =>
   Fold(
     (acc, cur) => acc && predicate(cur),
@@ -271,6 +303,10 @@ export const all = predicate =>
     id
   )
 
+/**
+ * any :: (a -> Boolean) -> Fold a Boolean
+ * Check if there is at least one element in a foldable satisfy a predicate
+ */
 export const any = predicate =>
   Fold(
     (acc, cur) => acc || predicate(cur),
@@ -278,6 +314,10 @@ export const any = predicate =>
     id
   )
 
+/**
+ * product :: Number a => Fold a a
+ * Multiply all numbers
+ */
 export const product =
   Fold(
     multiply,
@@ -285,6 +325,10 @@ export const product =
     id
   )
 
+/**
+ * sqrSum :: Number a => Fold a a
+ * Calculate the square sum
+ */
 export const sqrSum =
   Fold(
     (acc, cur) => acc + cur * cur,
@@ -292,6 +336,10 @@ export const sqrSum =
     id
   )
 
+/**
+ * variance :: Number a => Fold a a
+ * Calculate variance
+ */
 export const variance =
   sqrSum
     .map(
@@ -301,25 +349,49 @@ export const variance =
     .ap(length)
     .ap(mean)
 
+/**
+ * std :: Number a => Fold a a
+ * Calculate standard deviation
+ */
 export const std =
   variance.map(Math.sqrt)
 
+/**
+ * max :: Number a => Fold a a
+ * Get the maximum number
+ */
 export const max =
   _Fold1(Math.max)
 
+/**
+ * min :: Number a => Fold a a
+ * Get the minimal number
+ */
 export const min =
   _Fold1(Math.min)
 
+/**
+ * elem :: a -> Fold a Boolean
+ * Check if an element is in the foldable
+ */
 export const elem = compose(
   any,
   equals
 )
 
+/**
+ * notElem :: a -> Fold a Boolean
+ * Check if an element is NOT in the foldable
+ */
 export const notElem = compose(
   all,
   notEqual
 )
 
+/**
+ * find :: a -> Fold a Maybe a
+ * Find an element and return it wrapped in a Just or Nothing
+ */
 export const find = a =>
   Fold(
     (acc, cur) =>
@@ -334,6 +406,10 @@ export const find = a =>
     id
   )
 
+/**
+ * nth :: Integer -> Fold a a
+ * Get the nth element wrapped in a Just or Nothing
+ */
 export const nth = n =>
   Fold(
     (acc, cur) =>
@@ -351,6 +427,10 @@ export const nth = n =>
     p => p._2
   )
 
+/**
+ * findIndex :: (a -> Boolean) -> Fold a Maybe(Integer)
+ * Find a index according to a predicate wrapped in a Just or Nothing
+ */
 export const findIndex = predicate =>
   Fold(
     (acc, cur) =>
@@ -368,11 +448,20 @@ export const findIndex = predicate =>
       : p._2
   )
 
+/**
+ * elemIndex :: a -> Fold a Integer
+ * Find the index of an element wrapped in Just or Nothing
+ */
 export const elemIndex = compose(
   findIndex,
   equals
 )
 
+/**
+ * sink :: (Monad m, Monoid w) -> (a -> m w) -> FoldM m a w
+ * Convert a function producing effects to a Foldable.
+ * Then concat the result of the effects for each element when reduced.
+ */
 export const sink = (Monad, Monoid) => act =>
   FoldM(
     (m, a) =>
@@ -384,6 +473,10 @@ export const sink = (Monad, Monoid) => act =>
     Monad.of
   )
 
+/**
+ * list :: Fold a [a]
+ * Fold all elements to a list
+ */
 export const list = Fold(
   (acc, cur) =>
     compose(
@@ -394,6 +487,10 @@ export const list = Fold(
   f => f([])
 )
 
+/**
+ * revList :: Fold a [a]
+ * Reverse a list
+ */
 export const revList = Fold(
   (acc, cur) =>
     [cur].concat(acc),
@@ -401,6 +498,10 @@ export const revList = Fold(
   id
 )
 
+/**
+ * num :: Ord a => Fold a [a]
+ * Remove remaining duplicates of each element and produce a list containing unique elements.
+ */
 export const nub = Fold(
   (acc, cur) =>
     acc._2.has(cur)
@@ -416,6 +517,10 @@ export const nub = Fold(
   p => p._1([])
 )
 
+/**
+ * set :: Fold a (Set a)
+ * Fold to Set
+ */
 export const set = Fold(
   (acc, cur) =>
     acc.add(cur),
@@ -423,6 +528,12 @@ export const set = Fold(
   id
 )
 
+/**
+ * premap :: (a -> b) -> Fold a r -> Fold b r
+ * Get a Fold that run f before each step.
+ * This is essentially the same as in mapping then folding.
+ * But this is more efficient in most cases.
+ */
 export const premap = f => fold =>
   Fold(
     (acc, cur) => fold.step(acc, f(cur)),
@@ -430,6 +541,10 @@ export const premap = f => fold =>
     fold.done
   )
 
+/**
+ * premapM :: (a -> m b) -> FoldM m a r -> FoldM m b r
+ * The monadic version of the premap.
+ */
 export const premapM = f => fold =>
   FoldM(
     (acc, cur) =>
@@ -441,6 +556,11 @@ export const premapM = f => fold =>
     fold.done
   )
 
+/**
+ * prefilter :: (a -> Boolean) -> Fold a r -> Fold a r
+ * Get a Fold that run a predicate on the current value before each step to
+ * determine the result should include the current step or not.
+ */
 export const prefilter = predicate => fold =>
   Fold(
     (acc, cur) =>
@@ -451,6 +571,10 @@ export const prefilter = predicate => fold =>
     fold.done
   )
 
+/**
+ * prefilterM :: (a -> m Boolean) -> Fold m a r -> Fold m a r
+ * The monadic version of prefilter
+ */
 export const prefilterM = predicateM => fold =>
   FoldM(
     (acc, cur) => {

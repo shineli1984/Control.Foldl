@@ -68,7 +68,7 @@ This approach can be easilly adopted for combining any number of foldings. This 
 # How
 ## Compose existing folds
 
-To come up a new fold base on existing folds (in this example calculating averge of an array of numbers), first, write the algorithm in a curried function.
+To come up a new fold base on existing folds (in this example calculating average of an array of numbers), first, write the algorithm in a curried function.
 ```js
 // instead of (sum, length) => ...
 const avgAlgorithm = sum => length =>
@@ -191,3 +191,6 @@ sumM
   .reduce([9, 2, 4]) // AMonad(5)
 
 ```
+
+# API documentation
+Type signaure, description and examples are in source code.
